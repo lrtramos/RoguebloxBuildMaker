@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Rogueblox Build Maker</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #151821;
+    --panel-2: #1a1f2b;
+    --text: #e8eaf0;
+    --muted: #a8b0c2;
+    --accent: #6ea8fe;
+    --ring: #2c3344;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    background: radial-gradient(1200px 800px at 20% -10%, #121523 15%, var(--bg) 60%);
+    color: var(--text);
+    padding: 24px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { margin: 0 0 16px; font-size: 28px; letter-spacing: .2px; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(12, 1fr); }
+  .card { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--ring); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .controls { grid-column: span 7; }
+  .summary { grid-column: span 5; position: sticky; top: 16px; align-self: start; }
+  label { display:block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  select { width: 100%; background: #101521; color: var(--text); border: 1px solid #2a3244; border-radius: 12px; padding: 10px 12px; outline: none; }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(110,168,254,.15); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .full { grid-column: 1 / -1; }
+  .stats { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .stat { background: #0e1320; border: 1px solid #23293a; border-radius: 12px; padding: 12px; }
+  .stat b { display:block; font-size: 12px; color:var(--muted); margin-bottom: 6px; }
+  .value { font-size: 22px; letter-spacing: .3px; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px; }
+  .pill { font-size: 12px; color: var(--muted); border:1px solid #2a3244; padding:4px 8px; border-radius:999px;}
+  .footer-note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 920px) { .controls, .summary { grid-column: 1 / -1; position: static; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rogueblox Build Maker</h1>
+  <div class="subtitle">Pick your race, armor pieces, weapon, and their reforges. Stats update instantly.</div>
+
+  <div class="grid">
+    <!-- Controls -->
+    <div class="card controls">
+      <div class="row full"><div class="full"><label for="race">Race</label><select id="race"></select></div></div>
+
+      <div class="row">
+        <div><label for="head">Head Gear</label><select id="head"></select></div>
+        <div><label for="headReforge">Head Reforge</label><select id="headReforge"></select></div>
+      </div>
+
+      <div class="row">
+        <div><label for="body">Body Gear</label><select id="body"></select></div>
+        <div><label for="bodyReforge">Body Reforge</label><select id="bodyReforge"></select></div>
+      </div>
+
+      <div class="row">
+        <div><label for="legs">Leg Gear</label><select id="legs"></select></div>
+        <div><label for="legsReforge">Leg Reforge</label><select id="legsReforge"></select></div>
+      </div>
+
+      <div class="row">
+        <div><label for="weapon">Weapon</label><select id="weapon"></select></div>
+        <div><label for="weaponReforge">Weapon Reforge</label><select id="weaponReforge"></select></div>
+      </div>
+
+      <div class="footer-note">Tip: Get better at the <code>GAME</code> you loser.</div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card summary">
+      <div class="titlebar">
+        <div><b>Final Stats</b></div>
+        <div class="pill" id="buildLabel">Race: — • Weapon: —</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>HP</b><div class="value" id="stat-hp">0</div></div>
+        <div class="stat"><b>Physical Armor</b><div class="value" id="stat-phys-armor">0</div></div>
+        <div class="stat"><b>Magical Armor</b><div class="value" id="stat-mag-armor">0</div></div>
+        <div class="stat"><b>Physical Penetration</b><div class="value" id="stat-phys-pen">0</div></div>
+        <div class="stat"><b>Magical Penetration</b><div class="value" id="stat-mag-pen">0</div></div>
+        <div class="stat"><b>Speed</b><div class="value" id="stat-speed">0</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =======================
+// DATA
+// =======================
+const races = [
+  { name: "— Select race —", stats: {} },
+  { name: "Elf",    stats: { hp: 7, magPen: 1 } },
+  { name: "Terran", stats: { hp: 10, physArmor: 2 } },
+  { name: "Apex",   stats: { hp: 8, speed: 0.1 } },
+  { name: "Goblin", stats: { physArmor: 3, speed: 0.05 } },
+];
+
+const headGear = [
+  { name: "— Select head gear —", stats: {} },
+  { name: "Ascendant Cresthelm", stats: { hp:1, physArmor:1, magArmor:4, physPen:0, magPen:1.5, speed:1 } },
+  { name: "Heirarch’s Crest", stats: { hp:3, physArmor:5, magArmor:1, physPen:0, magPen:2.5, speed:0.5 } },
+  { name: "Blue Fedora", stats: { hp:5, physArmor:0, magArmor:0, physPen:0, magPen:0, speed:0 } },
+  { name: "Graveguard Helmet", stats: { hp:3, physArmor:1, magArmor:1, physPen:0, magPen:0, speed:0 } },
+];
+
+const bodyGear = [
+  { name: "— Select body gear —", stats: {} },
+  { name: "Expeditioner’s Dress", stats: { hp:5, physArmor:4, magArmor:2, physPen:0, magPen:1, speed:0 } },
+  { name: "Heriarch’s Honeycomb", stats: { hp:10, physArmor:5, magArmor:3, physPen:0, magPen:4, speed:0 } },
+  { name: "Proselyte Coat", stats: { hp:8, physArmor:4, magArmor:4, physPen:1.5, magPen:1.5, speed:0 } },
+  { name: "Regent’s Shawl", stats: { hp:6, physArmor:3, magArmor:6, physPen:4, magPen:0, speed:0 } },
+];
+
+const legGear = [
+  { name: "— Select leg gear —", stats: {} },
+  { name: "Regents Sabatons", stats: { hp:2, physArmor:2, magArmor:3, physPen:2, magPen:0, speed:1 } },
+  { name: "Rot Doctor Boots", stats: { hp:2, physArmor:1, magArmor:3, physPen:0, magPen:2, speed:1 } },
+  { name: "Tranished Leggings", stats: { hp:3, physArmor:3, magArmor:3, physPen:1, magPen:-1, speed:0 } },
+  { name: "Mercenary Boots", stats: { hp:1, physArmor:3, magArmor:0, physPen:0, magPen:0, speed:0 } },
+];
+
+const weapons = [
+  { name: "— Select weapon —", stats: {} },
+  { name: "Demonite Caestus", stats: { physPen:3 } },
+  { name: "Luminite Chakram", stats: { magPen:0.4 } },
+  { name: "Farm Hands", stats: { physPen:3 } },
+  { name: "Taloned Farm Hands", stats: { physPen:2, magPen:0.2 } },
+  { name: "Cenarius' Sabatons", stats: { physPen:3, magPen:0.1 } },
+  { name: "Demonite Sword", stats: { physPen:3 } },
+  { name: "Antlion's Tusk", stats: { physPen:6, magPen:0.2 } },
+  { name: "Metssilva Sword", stats: { physPen:3, magPen:0.1 } },
+];
+
+// Armor Reforges
+const armorReforges = [
+  { name: "— Select —", mult:{}, flat:{} },
+  { name: "Heavy", mult:{}, flat:{ hp:2.5, magArmor:1.25, speed:-0.4 } },
+  { name: "Spiky", mult:{}, flat:{ hp:-1, physPen:3 } },
+  { name: "Mythic", mult:{}, flat:{ hp:2, physPen:1 } },
+  { name: "Titanic", mult:{}, flat:{ hp:1.25, magArmor:2.5, speed:-0.4 } },
+  { name: "Clean", mult:{}, flat:{ hp:2, magArmor:1, magPen:1 } },
+  { name: "Light", mult:{}, flat:{ hp:3, speed:1 } },
+  { name: "Pure", mult:{}, flat:{ physPen:2, magPen:1 } },
+  { name: "Fierce", mult:{}, flat:{ hp:2, magArmor:1, magPen:1 } },
+  { name: "Attuned", mult:{}, flat:{ hp:-1, magPen:3 } },
+  { name: "Petrified", mult:{}, flat:{ hp:2, physArmor:1 } },
+  { name: "Cursed", mult:{}, flat:{ hp:2, magArmor:1 } },
+  { name: "Polished", mult:{}, flat:{ hp:1, magArmor:2 } },
+  { name: "Sanded", mult:{}, flat:{ hp:2, magArmor:1 } },
+];
+
+// Weapon Reforges
+const weaponReforges = [
+  { name:"— Select —", mult:{}, flat:{} },
+  { name:"Arcane", mult:{}, flat:{ physPen:2, magPen:2 } },
+  { name:"Epic", mult:{}, flat:{ physPen:0.2, magPen:5 } },
+  { name:"Spicy", mult:{}, flat:{ physPen:0, magPen:5 } },
+  { name:"Legendary", mult:{}, flat:{ physPen:4, magPen:4 } },
+];
+
+// =======================
+// UTILITY
+// =======================
+function byId(id){return document.getElementById(id);}
+function safe(val){return Number.isFinite(val)?val:0;}
+function round2(x){return Math.round(x*100)/100;}
+function fillSelect(select, items){
+  select.innerHTML="";
+  items.forEach((item,i)=>{const opt=document.createElement("option"); opt.value=i; opt.textContent=item.name; select.appendChild(opt);});
+}
+
+function applyReforge(stats, reforge){
+  const flat = reforge?.flat||{};
+  const mult = reforge?.mult||{};
+  // Make sure all possible stats exist
+  const out = {hp:0, physArmor:0, magArmor:0, physPen:0, magPen:0, speed:0, ...stats};
+  for(let k in out){
+    out[k] = safe(out[k]) * (1 + safe(mult[k]));
+    out[k] += safe(flat[k]);
+  }
+  return out;
+}
+
+function update(){
+  const race = races[byId("race").value]||races[0];
+  const head = headGear[byId("head").value]||headGear[0];
+  const body = bodyGear[byId("body").value]||bodyGear[0];
+  const legs = legGear[byId("legs").value]||legGear[0];
+  const weapon = weapons[byId("weapon").value]||weapons[0];
+
+  const headRef = armorReforges[byId("headReforge").value]||armorReforges[0];
+  const bodyRef = armorReforges[byId("bodyReforge").value]||armorReforges[0];
+  const legsRef = armorReforges[byId("legsReforge").value]||armorReforges[0];
+  const weaponRef = weaponReforges[byId("weaponReforge").value]||weaponReforges[0];
+
+  const headFinal = applyReforge(head.stats, headRef);
+  const bodyFinal = applyReforge(body.stats, bodyRef);
+  const legsFinal = applyReforge(legs.stats, legsRef);
+  const weaponFinal = applyReforge(weapon.stats, weaponRef);
+
+  const total = {
+    hp: safe(race.stats.hp) + headFinal.hp + bodyFinal.hp + legsFinal.hp,
+    physArmor: safe(race.stats.physArmor) + headFinal.physArmor + bodyFinal.physArmor + legsFinal.physArmor,
+    magArmor: safe(race.stats.magArmor) + headFinal.magArmor + bodyFinal.magArmor + legsFinal.magArmor,
+    physPen: safe(race.stats.physPen) + headFinal.physPen + bodyFinal.physPen + legsFinal.physPen + weaponFinal.physPen,
+    magPen: safe(race.stats.magPen) + headFinal.magPen + bodyFinal.magPen + legsFinal.magPen + weaponFinal.magPen,
+    speed: safe(race.stats.speed) + headFinal.speed + bodyFinal.speed + legsFinal.speed,
+  };
+
+  byId("stat-hp").textContent = round2(total.hp);
+  byId("stat-phys-armor").textContent = round2(total.physArmor);
+  byId("stat-mag-armor").textContent = round2(total.magArmor);
+  byId("stat-phys-pen").textContent = round2(total.physPen);
+  byId("stat-mag-pen").textContent = round2(total.magPen);
+  byId("stat-speed").textContent = round2(total.speed);
+
+  const raceName = race.name.includes("Select")?"—":race.name;
+  const weapName = weapon.name.includes("Select")?"—":weapon.name;
+  byId("buildLabel").textContent = `Race: ${raceName} • Weapon: ${weapName}`;
+}
+// =======================
+// UPDATE FUNCTION
+// =======================
+function update(){
+  const race = races[byId("race").value]||races[0];
+  const head = headGear[byId("head").value]||headGear[0];
+  const body = bodyGear[byId("body").value]||bodyGear[0];
+  const legs = legGear[byId("legs").value]||legGear[0];
+  const weapon = weapons[byId("weapon").value]||weapons[0];
+
+  const headRef = armorReforges[byId("headReforge").value]||armorReforges[0];
+  const bodyRef = armorReforges[byId("bodyReforge").value]||armorReforges[0];
+  const legsRef = armorReforges[byId("legsReforge").value]||armorReforges[0];
+  const weaponRef = weaponReforges[byId("weaponReforge").value]||weaponReforges[0];
+
+  const headFinal = applyReforge(head.stats, headRef);
+  const bodyFinal = applyReforge(body.stats, bodyRef);
+  const legsFinal = applyReforge(legs.stats, legsRef);
+  const weaponFinal = applyReforge(weapon.stats, weaponRef);
+
+  const total = {
+    hp: safe(race.stats.hp) + headFinal.hp + bodyFinal.hp + legsFinal.hp,
+    physArmor: safe(race.stats.physArmor) + headFinal.physArmor + bodyFinal.physArmor + legsFinal.physArmor,
+    magArmor: safe(race.stats.magArmor) + headFinal.magArmor + bodyFinal.magArmor + legsFinal.magArmor,
+    physPen: safe(race.stats.physPen) + headFinal.physPen + bodyFinal.physPen + legsFinal.physPen + weaponFinal.physPen,
+    magPen: safe(race.stats.magPen) + headFinal.magPen + bodyFinal.magPen + legsFinal.magPen + weaponFinal.magPen,
+    speed: safe(race.stats.speed) + headFinal.speed + bodyFinal.speed + legsFinal.speed,
+  };
+
+  byId("stat-hp").textContent = round2(total.hp);
+  byId("stat-phys-armor").textContent = round2(total.physArmor);
+  byId("stat-mag-armor").textContent = round2(total.magArmor);
+  byId("stat-phys-pen").textContent = round2(total.physPen);
+  byId("stat-mag-pen").textContent = round2(total.magPen);
+  byId("stat-speed").textContent = round2(total.speed);
+
+  const raceName = race.name.includes("Select")?"—":race.name;
+  const weapName = weapon.name.includes("Select")?"—":weapon.name;
+  byId("buildLabel").textContent = `Race: ${raceName} • Weapon: ${weapName}`;
+}
+
+// =======================
+// INIT
+// =======================
+fillSelect(byId("race"), races);
+fillSelect(byId("head"), headGear);
+fillSelect(byId("body"), bodyGear);
+fillSelect(byId("legs"), legGear);
+fillSelect(byId("weapon"), weapons);
+
+fillSelect(byId("headReforge"), armorReforges);
+fillSelect(byId("bodyReforge"), armorReforges);
+fillSelect(byId("legsReforge"), armorReforges);
+fillSelect(byId("weaponReforge"), weaponReforges);
+
+document.querySelectorAll("select").forEach(s=>s.addEventListener("change", update));
+update();
+</script>
+</body>
+</html>
